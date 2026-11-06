@@ -249,23 +249,23 @@ Best regards,
   var grab = document.getElementById('grab');
   var quick = document.getElementById('quick');
   var toast = document.getElementById('toast');
-  var MIN = 80;
+  var MIN = 120; // original minimum height
   var MAX = 600;
-  var minH = 120; // height set by the grab bar; content can still push it taller
+  var manualH = null; // set by the grab bar; null means auto-expand to fit the text
 
-  // Grow to fit content, never shorter than the height set by the grab bar.
-  // The compose card sits at the bottom of the layout, so growth pushes the thread up.
+  // Grow to fit content. The compose card sits at the bottom of the layout, so growth pushes the thread up.
   // Capped at 55% of the window so Send stays on screen. Past the cap it scrolls.
   function autosize() {
     var cap = Math.round(window.innerHeight * 0.55);
     body.style.height = 'auto';
-    var h = Math.max(body.scrollHeight, minH);
+    var h = manualH !== null ? manualH : Math.max(body.scrollHeight, MIN);
     body.style.height = Math.min(h, cap) + 'px';
-    body.style.overflowY = h > cap ? 'auto' : 'hidden';
+    body.style.overflowY = body.scrollHeight > body.clientHeight ? 'auto' : 'hidden';
   }
 
-  function setMinH(next) {
-    minH = Math.min(MAX, Math.max(MIN, next));
+  // The grab bar sets the height outright, so it can shrink below the text and scroll.
+  function setManualH(next) {
+    manualH = Math.min(MAX, Math.max(MIN, next));
     autosize();
   }
 
@@ -287,7 +287,7 @@ Best regards,
   });
   grab.addEventListener('pointermove', function (e) {
     if (!dragging) return;
-    setMinH(startH + (startY - e.clientY));
+    setManualH(startH + (startY - e.clientY));
   });
   function endDrag() { dragging = false; }
   grab.addEventListener('pointerup', endDrag);
@@ -295,11 +295,13 @@ Best regards,
 
   // Keyboard: Arrow Up / Down on the focused bar.
   grab.addEventListener('keydown', function (e) {
-    if (e.key === 'ArrowUp') { setMinH(minH + 20); e.preventDefault(); }
-    if (e.key === 'ArrowDown') { setMinH(minH - 20); e.preventDefault(); }
+    var current = manualH !== null ? manualH : body.offsetHeight;
+    if (e.key === 'ArrowUp') { setManualH(current + 20); e.preventDefault(); }
+    if (e.key === 'ArrowDown') { setManualH(current - 20); e.preventDefault(); }
   });
 
   document.getElementById('insert').addEventListener('click', function () {
+    manualH = null; // a pasted response goes back to auto-expand
     body.value = quick.textContent;
     body.focus();
     autosize();
